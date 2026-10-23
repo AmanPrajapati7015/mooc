@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Quiz Interactivator",
-  "version": "1.0",
-  "description": "Makes static quiz questions interactive when clicked.",
-  "permissions": ["activeTab", "scripting"],
-  "action": {},
-  "background": {
-    "service_worker": "background.js"
-  }
+  "name": "NPTEL Quiz Interactivator",
+  "version": "1.2",
+  "description": "Automatically makes NPTEL quizzes interactive.",
+  "content_scripts": [
+    {
+      "matches": ["https://onlinecourses.nptel.ac.in/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }

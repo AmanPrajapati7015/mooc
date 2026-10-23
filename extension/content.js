@@ -1,11 +1,9 @@
-// 1. Setup the Score Trackers
 let correctCount = 0;
 let wrongCount = 0;
-const allQuestions = document.querySelectorAll('section.bg-white');
-const totalQuestions = allQuestions.length;
 
-// 2. Create the floating progress UI (ensure we only create it once)
-if (!document.getElementById('quiz-progress-tracker')) {
+function initTracker(totalQuestions) {
+    if (document.getElementById('quiz-progress-tracker')) return;
+
     const tracker = document.createElement('div');
     tracker.id = 'quiz-progress-tracker';
     tracker.style.cssText = `
@@ -24,7 +22,7 @@ if (!document.getElementById('quiz-progress-tracker')) {
     
     tracker.innerHTML = `
         <div style="font-weight: 600; margin-bottom: 10px; font-size: 14px; color: #333;">
-            Quiz Progress: <span id="qc-answered">0</span> / ${totalQuestions}
+            Quiz Progress: <span id="qc-answered">0</span> / <span id="qc-total">${totalQuestions}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; font-weight: 500;">
             <span style="color: #1C9B38;">Correct: <span id="qc-correct">0</span></span>
@@ -38,8 +36,7 @@ if (!document.getElementById('quiz-progress-tracker')) {
     document.body.appendChild(tracker);
 }
 
-// Function to update the tracker UI
-function updateProgress() {
+function updateProgress(totalQuestions) {
     const answeredTotal = correctCount + wrongCount;
     document.getElementById('qc-answered').innerText = answeredTotal;
     document.getElementById('qc-correct').innerText = correctCount;
@@ -52,64 +49,68 @@ function updateProgress() {
     document.getElementById('qc-bar-wrong').style.width = wrongPct + '%';
 }
 
+function processQuestions() {
+    // Updated selector to target only the specific question blocks
+    const allQuestions = document.querySelectorAll('section.bg-white');
+    if (allQuestions.length === 0) return;
 
-// 3. Hide the feedback containers initially
-const feedbackContainers = document.querySelectorAll('.mt-5.flex.flex-wrap');
-feedbackContainers.forEach(container => {
-    container.hidden = true;
-});
+    initTracker(allQuestions.length);
 
-// 4. Select all radio inputs and apply quiz logic
-const radios = document.querySelectorAll('input[type="radio"]');
+    allQuestions.forEach(questionDiv => {
+        if (questionDiv.dataset.processed === "true") return;
+        questionDiv.dataset.processed = "true";
 
-radios.forEach(radio => {
-    if (radio.dataset.processed === "true") return;
-    radio.dataset.processed = "true";
-
-    radio.removeAttribute('disabled');
-    radio.removeAttribute('checked');
-    radio.checked = false;
-    
-    const parentLabel = radio.closest('label');
-    if (parentLabel) {
-        parentLabel.style.pointerEvents = 'auto';
-    }
-
-    radio.addEventListener('click', function (e) {
-        const selectedLabel = this.closest('label').querySelector('span.break-words').textContent.trim().toLowerCase();
-        const questionDiv = this.closest('section');
-        
-        // Lock the question
-        const allRadios = questionDiv.querySelectorAll('input[type="radio"]');
-        allRadios.forEach(r => r.disabled = true);
-
-        // Find correct answer
         const feedbackContainer = questionDiv.querySelector('.mt-5.flex.flex-wrap');
-        const acceptedAnswerSpan = feedbackContainer.querySelector('.ml-2'); 
-        const correctAnswer = acceptedAnswerSpan ? acceptedAnswerSpan.textContent.trim().toLowerCase() : '';
+        if (feedbackContainer) feedbackContainer.hidden = true;
 
-        const statusBadge = feedbackContainer.children[0];
+        const radios = questionDiv.querySelectorAll('input[type="radio"]');
 
-        // Evaluate and update score
-        if (selectedLabel === correctAnswer) {
-            statusBadge.textContent = selectedLabel + ' (Correct Answer)';
-            statusBadge.style.color = '#1C9B38';
-            statusBadge.style.borderColor = '#1C9B38';
-            correctCount++; // Increment correct score
-        } else {
-            statusBadge.textContent = selectedLabel + ' (Wrong Answer)';
-            statusBadge.style.color = '#dc3545';
-            statusBadge.style.borderColor = '#dc3545';
-            wrongCount++; // Increment wrong score
-        }
+        radios.forEach(radio => {
+            radio.removeAttribute('disabled');
+            radio.removeAttribute('checked');
+            radio.checked = false;
+            
+            const parentLabel = radio.closest('label');
+            if (parentLabel) parentLabel.style.pointerEvents = 'auto';
 
-        // Update the visual progress bar
-        updateProgress();
+            radio.addEventListener('click', function () {
+                const selectedLabel = this.closest('label').querySelector('span.break-words').textContent.trim().toLowerCase();
+                
+                const allRadios = questionDiv.querySelectorAll('input[type="radio"]');
+                allRadios.forEach(r => r.disabled = true);
 
-        if (feedbackContainer.children[1]) {
-            feedbackContainer.children[1].hidden = true;
-        }
+                const acceptedAnswerSpan = feedbackContainer.querySelector('.ml-2'); 
+                const correctAnswer = acceptedAnswerSpan ? acceptedAnswerSpan.textContent.trim().toLowerCase() : '';
+                const statusBadge = feedbackContainer.children[0];
 
-        feedbackContainer.hidden = false;
+                if (selectedLabel === correctAnswer) {
+                    statusBadge.textContent = selectedLabel + ' (Correct Answer)';
+                    statusBadge.style.color = '#1C9B38';
+                    statusBadge.style.borderColor = '#1C9B38';
+                    correctCount++;
+                } else {
+                    statusBadge.textContent = selectedLabel + ' (Wrong Answer)';
+                    statusBadge.style.color = '#dc3545';
+                    statusBadge.style.borderColor = '#dc3545';
+                    wrongCount++;
+                }
+
+                // Updated to use the new selector length
+                updateProgress(allQuestions.length);
+
+                if (feedbackContainer.children[1]) {
+                    feedbackContainer.children[1].hidden = true;
+                }
+                feedbackContainer.hidden = false;
+            });
+        });
     });
-});
+}
+
+// Check for the specific question sections every 500ms
+let checkInterval = setInterval(() => {
+    if (document.querySelectorAll('section.bg-white').length > 0) {
+        processQuestions();
+        clearInterval(checkInterval);
+    }
+}, 500);
