@@ -8,7 +8,7 @@ function initTracker(totalQuestions) {
     tracker.id = 'quiz-progress-tracker';
     tracker.style.cssText = `
         position: fixed; 
-        bottom: 20px; 
+        top: 20px; 
         right: 20px; 
         background: white; 
         border: 1px solid #e5e7eb; 
