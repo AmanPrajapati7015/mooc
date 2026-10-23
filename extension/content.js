@@ -8,7 +8,7 @@ function initTracker(totalQuestions) {
     tracker.id = 'quiz-progress-tracker';
     tracker.style.cssText = `
         position: fixed; 
-        top: 20px; 
+        bottom: 20px; 
         right: 20px; 
         background: white; 
         border: 1px solid #e5e7eb; 
@@ -19,7 +19,7 @@ function initTracker(totalQuestions) {
         width: 250px; 
         font-family: sans-serif;
     `;
-    
+
     tracker.innerHTML = `
         <div style="font-weight: 600; margin-bottom: 10px; font-size: 14px; color: #333;">
             Quiz Progress: <span id="qc-answered">0</span> / <span id="qc-total">${totalQuestions}</span>
@@ -41,16 +41,15 @@ function updateProgress(totalQuestions) {
     document.getElementById('qc-answered').innerText = answeredTotal;
     document.getElementById('qc-correct').innerText = correctCount;
     document.getElementById('qc-wrong').innerText = wrongCount;
-    
+
     const correctPct = (correctCount / totalQuestions) * 100;
     const wrongPct = (wrongCount / totalQuestions) * 100;
-    
+
     document.getElementById('qc-bar-correct').style.width = correctPct + '%';
     document.getElementById('qc-bar-wrong').style.width = wrongPct + '%';
 }
 
 function processQuestions() {
-    // Updated selector to target only the specific question blocks
     const allQuestions = document.querySelectorAll('section.bg-white');
     if (allQuestions.length === 0) return;
 
@@ -69,18 +68,32 @@ function processQuestions() {
             radio.removeAttribute('disabled');
             radio.removeAttribute('checked');
             radio.checked = false;
-            
+
             const parentLabel = radio.closest('label');
             if (parentLabel) parentLabel.style.pointerEvents = 'auto';
 
             radio.addEventListener('click', function () {
                 const selectedLabel = this.closest('label').querySelector('span.break-words').textContent.trim().toLowerCase();
-                
+
                 const allRadios = questionDiv.querySelectorAll('input[type="radio"]');
                 allRadios.forEach(r => r.disabled = true);
 
-                const acceptedAnswerSpan = feedbackContainer.querySelector('.ml-2'); 
-                const correctAnswer = acceptedAnswerSpan ? acceptedAnswerSpan.textContent.trim().toLowerCase() : '';
+                let correctAnswer = '';
+                if (feedbackContainer) {
+                    // Check both spans and divs to be safe
+                    const elements = feedbackContainer.querySelectorAll('span, div');
+                    for (let el of elements) {
+                        // Use exact match to avoid matching a parent container that holds the whole sentence
+                        if (el.textContent.trim() === 'Accepted answer is') {
+                            const siblingElement = el.nextElementSibling;
+                            if (siblingElement) {
+                                correctAnswer = siblingElement.textContent.trim().toLowerCase();
+                            }
+                            break;
+                        }
+                    }
+                }
+
                 const statusBadge = feedbackContainer.children[0];
 
                 if (selectedLabel === correctAnswer) {
@@ -95,7 +108,6 @@ function processQuestions() {
                     wrongCount++;
                 }
 
-                // Updated to use the new selector length
                 updateProgress(allQuestions.length);
 
                 if (feedbackContainer.children[1]) {
@@ -107,7 +119,6 @@ function processQuestions() {
     });
 }
 
-// Check for the specific question sections every 500ms
 let checkInterval = setInterval(() => {
     if (document.querySelectorAll('section.bg-white').length > 0) {
         processQuestions();
